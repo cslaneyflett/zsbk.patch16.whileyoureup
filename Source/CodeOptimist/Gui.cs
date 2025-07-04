@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using HarmonyLib;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -121,7 +122,7 @@ internal static class Gui
 			MultiCheckboxState.Partial => Widgets.CheckboxPartialTex, 
 			_ => Widgets.CheckboxOffTex, 
 		});
-		if (draggableResult == Widgets.DraggableResult.Dragged || Verse.DraggableResultUtility.AnyPressed(draggableResult))
+		if (draggableResult is Widgets.DraggableResult.Dragged or Widgets.DraggableResult.Pressed or Widgets.DraggableResult.DraggedThenPressed)
 		{
 			multiCheckboxState = state switch
 			{
@@ -130,14 +131,17 @@ internal static class Gui
 				_ => MultiCheckboxState.On, 
 			};
 		}
+
+		var widgetsTraverse = Traverse.Create(typeof(Widgets));
 		if (draggableResult == Widgets.DraggableResult.Dragged)
 		{
-			Widgets.checkboxPainting = true;
-			bool checkboxPaintingState = ((multiCheckboxState == MultiCheckboxState.On || multiCheckboxState == MultiCheckboxState.Partial) ? true : false);
-			Widgets.checkboxPaintingState = checkboxPaintingState;
+			widgetsTraverse.Field("checkboxPainting")
+				.SetValue(true);
+			widgetsTraverse.Field("checkboxPaintingState")
+				.SetValue(multiCheckboxState is MultiCheckboxState.On or MultiCheckboxState.Partial);
 			paintingState = multiCheckboxState;
 		}
-		else if (Widgets.checkboxPainting && Mouse.IsOver(rect))
+		else if (widgetsTraverse.Field<bool>("checkboxPainting").Value && Mouse.IsOver(rect))
 		{
 			multiCheckboxState = paintingState;
 		}

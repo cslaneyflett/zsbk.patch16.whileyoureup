@@ -123,20 +123,20 @@ internal class Mod : Verse.Mod
 				string text3;
 				switch (type)
 				{
-				case DetourType.Puah:
-					text3 = ("PickUpAndHaulPlus" + text2).ModTranslate(text.Named("ORIGINAL"));
-					break;
-				case DetourType.HtcOpportunity:
-				case DetourType.PuahOpportunity:
-					text3 = ("Opportunity" + text2).ModTranslate(text.Named("ORIGINAL"), opportunity.jobTarget.Label.Named("DESTINATION"));
-					break;
-				case DetourType.HtcBeforeCarry:
-				case DetourType.PuahBeforeCarry:
-					text3 = ("HaulBeforeCarry" + text2).ModTranslate(text.Named("ORIGINAL"), beforeCarry.carryTarget.Label.Named("DESTINATION"));
-					break;
-				default:
-					text3 = text;
-					break;
+					case DetourType.Puah:
+						text3 = ("PickUpAndHaulPlus" + text2).ModTranslate(text.Named("ORIGINAL"));
+						break;
+					case DetourType.HtcOpportunity:
+					case DetourType.PuahOpportunity:
+						text3 = ("Opportunity" + text2).ModTranslate(text.Named("ORIGINAL"), opportunity.jobTarget.Label.Named("DESTINATION"));
+						break;
+					case DetourType.HtcBeforeCarry:
+					case DetourType.PuahBeforeCarry:
+						text3 = ("HaulBeforeCarry" + text2).ModTranslate(text.Named("ORIGINAL"), beforeCarry.carryTarget.Label.Named("DESTINATION"));
+						break;
+					default:
+						text3 = text;
+						break;
 				}
 				text = text3;
 			}
@@ -262,8 +262,8 @@ internal class Mod : Verse.Mod
 				thingsInReducedPriorityStore = new List<Thing>(32);
 			}
 			thingsInReducedPriorityStore.AddRange(thing.GetSlotGroup().CellsList.SelectMany((IntVec3 cell) => from cellThing in cell.GetThingList(thing.Map)
-				where cellThing.def.EverHaulable
-				select cellThing));
+																											  where cellThing.def.EverHaulable
+																											  select cellThing));
 			thing.Map.haulDestinationManager.Notify_HaulDestinationChangedPriority();
 		}
 
@@ -272,7 +272,8 @@ internal class Mod : Verse.Mod
 		{
 			if (reducedPriorityStore != null)
 			{
-				Map obj = reducedPriorityStore.HaulDestinationOwner?.Map;
+				var owner = Traverse.Create(reducedPriorityStore).Property<IHaulDestination>("HaulDestinationOwner").Value;
+				var obj = owner?.Map;
 				reducedPriorityStore = null;
 				thingsInReducedPriorityStore.Clear();
 				obj?.haulDestinationManager.Notify_HaulDestinationChangedPriority();
@@ -340,7 +341,7 @@ internal class Mod : Verse.Mod
 				}
 				flag = false;
 				goto IL_004e;
-				IL_004e:
+			IL_004e:
 				if (flag)
 				{
 					valueSafe.Deactivate();
@@ -458,7 +459,10 @@ internal class Mod : Verse.Mod
 			{
 				return null;
 			}
-			Thing thing = WorkGiver_ConstructDeliverResources.resourcesAvailable.DefaultIfEmpty().MaxBy((Thing x) => x.stackCount);
+
+			var thingList = Traverse.Create<WorkGiver_ConstructDeliverResources>().Field<List<Thing>>("resourcesAvailable").Value;
+			var thing = thingList.DefaultIfEmpty().MaxBy((Thing x) => x.stackCount);
+			// Thing thing = WorkGiver_ConstructDeliverResources.resourcesAvailable.DefaultIfEmpty().MaxBy((Thing x) => x.stackCount);
 			if ((!havePuah || !settings.UsePickUpAndHaulPlus) && thing.stackCount <= need.count)
 			{
 				return null;
@@ -690,11 +694,11 @@ internal class Mod : Verse.Mod
 		}
 
 		[HarmonyPostfix]
-		private static void IncludeThingsInReducedPriorityStore(ref List<Thing> __result)
+		private static void IncludeThingsInReducedPriorityStore(ref ICollection<Thing> __result)
 		{
 			if (!thingsInReducedPriorityStore.NullOrEmpty())
 			{
-				__result.AddRange(thingsInReducedPriorityStore);
+				thingsInReducedPriorityStore.ForEach(__result.Add);
 			}
 		}
 	}
@@ -726,8 +730,8 @@ internal class Mod : Verse.Mod
 			}
 			BaseDetour detour = SetOrAddDetour(pawn, DetourType.ExistingElsePuah);
 			(Thing, IntVec3) tuple = (from x in value.Select(GetDefHaul)
-				where x.storeCell.IsValid
-				select x).DefaultIfEmpty().MinBy(((Thing thing, IntVec3 storeCell) x) => x.storeCell.DistanceToSquared(pawn.Position));
+									  where x.storeCell.IsValid
+									  select x).DefaultIfEmpty().MinBy(((Thing thing, IntVec3 storeCell) x) => x.storeCell.DistanceToSquared(pawn.Position));
 			SlotGroup closestSlotGroup = (tuple.Item2.IsValid ? tuple.Item2.GetSlotGroup(pawn.Map) : null);
 			Thing thing;
 			if (closestSlotGroup == null)
@@ -737,8 +741,8 @@ internal class Mod : Verse.Mod
 			else
 			{
 				thing = (from x in value.Select(GetDefHaul)
-					where x.storeCell.IsValid && x.storeCell.GetSlotGroup(pawn.Map) == closestSlotGroup
-					select x).DefaultIfEmpty().MinBy(((Thing thing, IntVec3 storeCell) x) => (index: x.thing.def.FirstThingCategory?.index, defName: x.thing.def.defName)).thing;
+						 where x.storeCell.IsValid && x.storeCell.GetSlotGroup(pawn.Map) == closestSlotGroup
+						 select x).DefaultIfEmpty().MinBy(((Thing thing, IntVec3 storeCell) x) => (index: x.thing.def.FirstThingCategory?.index, defName: x.thing.def.defName)).thing;
 			}
 			Thing firstThingToUnload = thing;
 			if (firstThingToUnload == null)
@@ -928,8 +932,8 @@ internal class Mod : Verse.Mod
 					};
 					storageBuildingCategoryDef.childCategories.Add(thingCategoryDef);
 					thingCategoryDef.childThingDefs.AddRange(from x in source
-						where x.modContentPack == storageMod
-						select (x));
+															 where x.modContentPack == storageMod
+															 select (x));
 					thingCategoryDef.PostLoad();
 					thingCategoryDef.ResolveReferences();
 				}
@@ -967,32 +971,32 @@ internal class Mod : Verse.Mod
 				settings.hbcDefaultBuildingFilter.SetAllow(modCategoryDef, allow: false);
 				switch (modContentPack?.PackageId)
 				{
-				case "jangodsoul.simplestorage.ref":
-				case "ogliss.thewhitecrayon.quarry":
-				case "rimfridge.kv.rw":
-				case "ludeon.rimworld":
-				case "lwm.deepstorage":
-				case "mlie.displaycases":
-				case "mlie.eggincubator":
-				case "sixdd.littlestorage2":
-				case "mlie.extendedstorage":
-				case "mlie.tobesdiningroom":
-				case "mlie.fireextinguisher":
-				case "solaris.furniturebase":
-				case "skullywag.extendedstorage":
-				case "vanillaexpanded.vfespacer":
-				case "buddy1913.expandedstorageboxes":
-				case "im.skye.rimworld.deepstorageplus":
-				case "jangodsoul.simplestorage":
-				case "mlie.functionalvanillaexpandedprops":
-				case "primitivestorage.velcroboy333":
-				case "proxyer.smallshelf":
-				case "vanillaexpanded.vfecore":
-				case "vanillaexpanded.vfeart":
-				case "vanillaexpanded.vfefarming":
-				case "vanillaexpanded.vfesecurity":
-					settings.hbcDefaultBuildingFilter.SetAllow(modCategoryDef, allow: true);
-					break;
+					case "jangodsoul.simplestorage.ref":
+					case "ogliss.thewhitecrayon.quarry":
+					case "rimfridge.kv.rw":
+					case "ludeon.rimworld":
+					case "lwm.deepstorage":
+					case "mlie.displaycases":
+					case "mlie.eggincubator":
+					case "sixdd.littlestorage2":
+					case "mlie.extendedstorage":
+					case "mlie.tobesdiningroom":
+					case "mlie.fireextinguisher":
+					case "solaris.furniturebase":
+					case "skullywag.extendedstorage":
+					case "vanillaexpanded.vfespacer":
+					case "buddy1913.expandedstorageboxes":
+					case "im.skye.rimworld.deepstorageplus":
+					case "jangodsoul.simplestorage":
+					case "mlie.functionalvanillaexpandedprops":
+					case "primitivestorage.velcroboy333":
+					case "proxyer.smallshelf":
+					case "vanillaexpanded.vfecore":
+					case "vanillaexpanded.vfeart":
+					case "vanillaexpanded.vfefarming":
+					case "vanillaexpanded.vfesecurity":
+						settings.hbcDefaultBuildingFilter.SetAllow(modCategoryDef, allow: true);
+						break;
 				}
 			}
 		}
@@ -1054,155 +1058,155 @@ internal class Mod : Verse.Mod
 			Rect rect3;
 			switch (tab)
 			{
-			case Tab.Opportunity:
-			{
-				Listing_Standard listing_Standard4 = new Listing_Standard
-				{
-					ColumnWidth = (float)Math.Round((innerRect.width - 17f) / 2f)
-				};
-				listing_Standard4.Begin(innerRect);
-				listing_Standard4.Label("Opportunity_Intro".ModTranslate(), -1f, (string)null);
-				listing_Standard4.Gap();
-				using (new DrawContext
-				{
-					LabelPct = 0.25f
-				})
-				{
-					listing_Standard4.DrawEnum(settings.Opportunity_PathChecker, "Opportunity_PathChecker", delegate(Settings.PathCheckerEnum val)
+				case Tab.Opportunity:
 					{
-						settings.Opportunity_PathChecker = val;
-					}, Text.LineHeight * 2f);
-				}
-				listing_Standard4.Gap();
-				listing_Standard4.DrawBool(ref settings.Opportunity_TweakVanilla, "Opportunity_TweakVanilla");
-				listing_Standard4.NewColumn();
-				listing_Standard4.Label("Opportunity_Tab".ModTranslate(), -1f, (string)null);
-				listing_Standard4.GapLine();
-				bool value = !settings.Opportunity_AutoBuildings;
-				listing_Standard4.DrawBool(ref value, "Opportunity_AutoBuildings");
-				settings.Opportunity_AutoBuildings = !value;
-				listing_Standard4.Gap(4f);
-				opportunitySearchWidget.OnGUI(listing_Standard4.GetRect(24f));
-				listing_Standard4.Gap(4f);
-				Rect rect2 = listing_Standard4.GetRect(innerRect.height - listing_Standard4.CurHeight - Text.LineHeight * 2f);
-				float num = 20f;
-				rect3 = new Rect(0f, 0f, rect2.width - num, opportunityTreeFilter?.CurHeight ?? 10000f);
-				Widgets.BeginScrollView(rect2, ref opportunityScrollPosition, rect3);
-				if (settings.Opportunity_AutoBuildings)
-				{
-					opportunityDummyFilter.CopyAllowancesFrom(settings.opportunityDefaultBuildingFilter);
-				}
-				opportunityTreeFilter = new Listing_TreeModFilter(settings.Opportunity_AutoBuildings ? opportunityDummyFilter : settings.opportunityBuildingFilter, null, null, null, null, opportunitySearchFilter);
-				opportunityTreeFilter.Begin(rect3);
-				opportunityTreeFilter.ListCategoryChildren(storageBuildingCategoryDef.treeNode, 1, null, rect3);
-				opportunityTreeFilter.End();
-				Widgets.EndScrollView();
-				listing_Standard4.GapLine();
-				listing_Standard4.DrawBool(ref settings.Opportunity_ToStockpiles, "Opportunity_ToStockpiles");
-				listing_Standard4.End();
-				break;
-			}
-			case Tab.OpportunityAdvanced:
-			{
-				float labelPct = 0.75f;
-				Listing_Standard listing_Standard5 = new Listing_Standard();
-				listing_Standard5.Begin(innerRect);
-				listing_Standard5.Label("OpportunityAdvanced_Text1".ModTranslate(), -1f, (string)null);
-				using (new DrawContext
-				{
-					TextAnchor = TextAnchor.MiddleRight,
-					LabelPct = labelPct
-				})
-				{
-					listing_Standard5.DrawPercent(ref settings.Opportunity_MaxNewLegsPctOrigTrip, "Opportunity_MaxNewLegsPctOrigTrip");
-					listing_Standard5.DrawPercent(ref settings.Opportunity_MaxTotalTripPctOrigTrip, "Opportunity_MaxTotalTripPctOrigTrip");
-				}
-				listing_Standard5.Gap();
-				listing_Standard5.GapLine();
-				listing_Standard5.Gap();
-				listing_Standard5.Label("OpportunityAdvanced_Text2".ModTranslate(), -1f, (string)null);
-				using (new DrawContext
-				{
-					TextAnchor = TextAnchor.MiddleRight,
-					LabelPct = labelPct
-				})
-				{
-					listing_Standard5.DrawFloat(ref settings.Opportunity_MaxStartToThing, "Opportunity_MaxStartToThing");
-					listing_Standard5.DrawFloat(ref settings.Opportunity_MaxStoreToJob, "Opportunity_MaxStoreToJob");
-					listing_Standard5.DrawPercent(ref settings.Opportunity_MaxStartToThingPctOrigTrip, "Opportunity_MaxStartToThingPctOrigTrip");
-					listing_Standard5.DrawPercent(ref settings.Opportunity_MaxStoreToJobPctOrigTrip, "Opportunity_MaxStoreToJobPctOrigTrip");
-				}
-				listing_Standard5.Gap();
-				listing_Standard5.GapLine();
-				listing_Standard5.Gap();
-				listing_Standard5.Label("OpportunityAdvanced_Text3".ModTranslate(), -1f, (string)null);
-				using (new DrawContext
-				{
-					TextAnchor = TextAnchor.MiddleRight,
-					LabelPct = labelPct
-				})
-				{
-					listing_Standard5.DrawInt(ref settings.Opportunity_MaxStartToThingRegionLookCount, "Opportunity_MaxStartToThingRegionLookCount");
-					listing_Standard5.DrawInt(ref settings.Opportunity_MaxStoreToJobRegionLookCount, "Opportunity_MaxStoreToJobRegionLookCount");
-				}
-				listing_Standard5.End();
-				break;
-			}
-			case Tab.BeforeCarryDetour:
-			{
-				Listing_Standard listing_Standard3 = new Listing_Standard
-				{
-					ColumnWidth = (float)Math.Round((innerRect.width - 17f) / 2f)
-				};
-				listing_Standard3.Begin(innerRect);
-				listing_Standard3.Label("HaulBeforeCarry_Intro".ModTranslate(), -1f, (string)null);
-				listing_Standard3.DrawBool(ref settings.HaulBeforeCarry_Supplies, "HaulBeforeCarry_Supplies");
-				listing_Standard3.DrawBool(ref settings.HaulBeforeCarry_Bills, "HaulBeforeCarry_Bills");
-				if (havePuah && settings.UsePickUpAndHaulPlus)
-				{
-					listing_Standard3.Gap();
-					listing_Standard3.Label("HaulBeforeCarry_EqualPriority".ModTranslate(), -1f, (string)null);
-					listing_Standard3.DrawBool(ref settings.HaulBeforeCarry_ToEqualPriority, "HaulBeforeCarry_ToEqualPriority");
-				}
-				listing_Standard3.NewColumn();
-				listing_Standard3.Label("HaulBeforeCarry_Tab".ModTranslate(), -1f, (string)null);
-				listing_Standard3.GapLine();
-				bool value = !settings.HaulBeforeCarry_AutoBuildings;
-				listing_Standard3.DrawBool(ref value, "HaulBeforeCarry_AutoBuildings");
-				settings.HaulBeforeCarry_AutoBuildings = !value;
-				listing_Standard3.Gap(4f);
-				hbcSearchWidget.OnGUI(listing_Standard3.GetRect(24f));
-				listing_Standard3.Gap(4f);
-				Rect rect2 = listing_Standard3.GetRect(innerRect.height - listing_Standard3.CurHeight - Text.LineHeight * 2f);
-				float num = 20f;
-				rect3 = new Rect(0f, 0f, rect2.width - num, hbcTreeFilter?.CurHeight ?? 10000f);
-				Widgets.BeginScrollView(rect2, ref hbcScrollPosition, rect3);
-				if (settings.HaulBeforeCarry_AutoBuildings)
-				{
-					hbcDummyFilter.CopyAllowancesFrom(settings.hbcDefaultBuildingFilter);
-				}
-				hbcTreeFilter = new Listing_TreeModFilter(settings.HaulBeforeCarry_AutoBuildings ? hbcDummyFilter : settings.hbcBuildingFilter, null, null, null, null, hbcSearchFilter);
-				hbcTreeFilter.Begin(rect3);
-				hbcTreeFilter.ListCategoryChildren(storageBuildingCategoryDef.treeNode, 1, null, rect3);
-				hbcTreeFilter.End();
-				Widgets.EndScrollView();
-				listing_Standard3.GapLine();
-				listing_Standard3.DrawBool(ref settings.HaulBeforeCarry_ToStockpiles, "HaulBeforeCarry_ToStockpiles");
-				listing_Standard3.End();
-				break;
-			}
-			case Tab.PickUpAndHaul:
-			{
-				Listing_Standard listing_Standard2 = new Listing_Standard();
-				listing_Standard2.ColumnWidth = (float)Math.Round((innerRect.width - 17f) / 2f);
-				listing_Standard2.Begin(innerRect);
-				listing_Standard2.Label("PickUpAndHaulPlus_Text1".ModTranslate(), -1f, (string)null);
-				listing_Standard2.GapLine();
-				listing_Standard2.Gap();
-				listing_Standard2.Label("PickUpAndHaulPlus_Text2".ModTranslate(), -1f, (string)null);
-				listing_Standard2.End();
-				break;
-			}
+						Listing_Standard listing_Standard4 = new Listing_Standard
+						{
+							ColumnWidth = (float)Math.Round((innerRect.width - 17f) / 2f)
+						};
+						listing_Standard4.Begin(innerRect);
+						listing_Standard4.Label("Opportunity_Intro".ModTranslate(), -1f);
+						listing_Standard4.Gap();
+						using (new DrawContext
+						{
+							LabelPct = 0.25f
+						})
+						{
+							listing_Standard4.DrawEnum(settings.Opportunity_PathChecker, "Opportunity_PathChecker", delegate (Settings.PathCheckerEnum val)
+							{
+								settings.Opportunity_PathChecker = val;
+							}, Text.LineHeight * 2f);
+						}
+						listing_Standard4.Gap();
+						listing_Standard4.DrawBool(ref settings.Opportunity_TweakVanilla, "Opportunity_TweakVanilla");
+						listing_Standard4.NewColumn();
+						listing_Standard4.Label("Opportunity_Tab".ModTranslate(), -1f);
+						listing_Standard4.GapLine();
+						bool value = !settings.Opportunity_AutoBuildings;
+						listing_Standard4.DrawBool(ref value, "Opportunity_AutoBuildings");
+						settings.Opportunity_AutoBuildings = !value;
+						listing_Standard4.Gap(4f);
+						opportunitySearchWidget.OnGUI(listing_Standard4.GetRect(24f));
+						listing_Standard4.Gap(4f);
+						Rect rect2 = listing_Standard4.GetRect(innerRect.height - listing_Standard4.CurHeight - Text.LineHeight * 2f);
+						float num = 20f;
+						rect3 = new Rect(0f, 0f, rect2.width - num, opportunityTreeFilter?.CurHeight ?? 10000f);
+						Widgets.BeginScrollView(rect2, ref opportunityScrollPosition, rect3);
+						if (settings.Opportunity_AutoBuildings)
+						{
+							opportunityDummyFilter.CopyAllowancesFrom(settings.opportunityDefaultBuildingFilter);
+						}
+						opportunityTreeFilter = new Listing_TreeModFilter(settings.Opportunity_AutoBuildings ? opportunityDummyFilter : settings.opportunityBuildingFilter, null, null, null, null, opportunitySearchFilter);
+						opportunityTreeFilter.Begin(rect3);
+						opportunityTreeFilter.ListCategoryChildren(storageBuildingCategoryDef.treeNode, 1, null, rect3);
+						opportunityTreeFilter.End();
+						Widgets.EndScrollView();
+						listing_Standard4.GapLine();
+						listing_Standard4.DrawBool(ref settings.Opportunity_ToStockpiles, "Opportunity_ToStockpiles");
+						listing_Standard4.End();
+						break;
+					}
+				case Tab.OpportunityAdvanced:
+					{
+						float labelPct = 0.75f;
+						Listing_Standard listing_Standard5 = new Listing_Standard();
+						listing_Standard5.Begin(innerRect);
+						listing_Standard5.Label("OpportunityAdvanced_Text1".ModTranslate(), -1f);
+						using (new DrawContext
+						{
+							TextAnchor = TextAnchor.MiddleRight,
+							LabelPct = labelPct
+						})
+						{
+							listing_Standard5.DrawPercent(ref settings.Opportunity_MaxNewLegsPctOrigTrip, "Opportunity_MaxNewLegsPctOrigTrip");
+							listing_Standard5.DrawPercent(ref settings.Opportunity_MaxTotalTripPctOrigTrip, "Opportunity_MaxTotalTripPctOrigTrip");
+						}
+						listing_Standard5.Gap();
+						listing_Standard5.GapLine();
+						listing_Standard5.Gap();
+						listing_Standard5.Label("OpportunityAdvanced_Text2".ModTranslate(), -1f);
+						using (new DrawContext
+						{
+							TextAnchor = TextAnchor.MiddleRight,
+							LabelPct = labelPct
+						})
+						{
+							listing_Standard5.DrawFloat(ref settings.Opportunity_MaxStartToThing, "Opportunity_MaxStartToThing");
+							listing_Standard5.DrawFloat(ref settings.Opportunity_MaxStoreToJob, "Opportunity_MaxStoreToJob");
+							listing_Standard5.DrawPercent(ref settings.Opportunity_MaxStartToThingPctOrigTrip, "Opportunity_MaxStartToThingPctOrigTrip");
+							listing_Standard5.DrawPercent(ref settings.Opportunity_MaxStoreToJobPctOrigTrip, "Opportunity_MaxStoreToJobPctOrigTrip");
+						}
+						listing_Standard5.Gap();
+						listing_Standard5.GapLine();
+						listing_Standard5.Gap();
+						listing_Standard5.Label("OpportunityAdvanced_Text3".ModTranslate(), -1f);
+						using (new DrawContext
+						{
+							TextAnchor = TextAnchor.MiddleRight,
+							LabelPct = labelPct
+						})
+						{
+							listing_Standard5.DrawInt(ref settings.Opportunity_MaxStartToThingRegionLookCount, "Opportunity_MaxStartToThingRegionLookCount");
+							listing_Standard5.DrawInt(ref settings.Opportunity_MaxStoreToJobRegionLookCount, "Opportunity_MaxStoreToJobRegionLookCount");
+						}
+						listing_Standard5.End();
+						break;
+					}
+				case Tab.BeforeCarryDetour:
+					{
+						Listing_Standard listing_Standard3 = new Listing_Standard
+						{
+							ColumnWidth = (float)Math.Round((innerRect.width - 17f) / 2f)
+						};
+						listing_Standard3.Begin(innerRect);
+						listing_Standard3.Label("HaulBeforeCarry_Intro".ModTranslate(), -1f);
+						listing_Standard3.DrawBool(ref settings.HaulBeforeCarry_Supplies, "HaulBeforeCarry_Supplies");
+						listing_Standard3.DrawBool(ref settings.HaulBeforeCarry_Bills, "HaulBeforeCarry_Bills");
+						if (havePuah && settings.UsePickUpAndHaulPlus)
+						{
+							listing_Standard3.Gap();
+							listing_Standard3.Label("HaulBeforeCarry_EqualPriority".ModTranslate(), -1f);
+							listing_Standard3.DrawBool(ref settings.HaulBeforeCarry_ToEqualPriority, "HaulBeforeCarry_ToEqualPriority");
+						}
+						listing_Standard3.NewColumn();
+						listing_Standard3.Label("HaulBeforeCarry_Tab".ModTranslate(), -1f);
+						listing_Standard3.GapLine();
+						bool value = !settings.HaulBeforeCarry_AutoBuildings;
+						listing_Standard3.DrawBool(ref value, "HaulBeforeCarry_AutoBuildings");
+						settings.HaulBeforeCarry_AutoBuildings = !value;
+						listing_Standard3.Gap(4f);
+						hbcSearchWidget.OnGUI(listing_Standard3.GetRect(24f));
+						listing_Standard3.Gap(4f);
+						Rect rect2 = listing_Standard3.GetRect(innerRect.height - listing_Standard3.CurHeight - Text.LineHeight * 2f);
+						float num = 20f;
+						rect3 = new Rect(0f, 0f, rect2.width - num, hbcTreeFilter?.CurHeight ?? 10000f);
+						Widgets.BeginScrollView(rect2, ref hbcScrollPosition, rect3);
+						if (settings.HaulBeforeCarry_AutoBuildings)
+						{
+							hbcDummyFilter.CopyAllowancesFrom(settings.hbcDefaultBuildingFilter);
+						}
+						hbcTreeFilter = new Listing_TreeModFilter(settings.HaulBeforeCarry_AutoBuildings ? hbcDummyFilter : settings.hbcBuildingFilter, null, null, null, null, hbcSearchFilter);
+						hbcTreeFilter.Begin(rect3);
+						hbcTreeFilter.ListCategoryChildren(storageBuildingCategoryDef.treeNode, 1, null, rect3);
+						hbcTreeFilter.End();
+						Widgets.EndScrollView();
+						listing_Standard3.GapLine();
+						listing_Standard3.DrawBool(ref settings.HaulBeforeCarry_ToStockpiles, "HaulBeforeCarry_ToStockpiles");
+						listing_Standard3.End();
+						break;
+					}
+				case Tab.PickUpAndHaul:
+					{
+						Listing_Standard listing_Standard2 = new Listing_Standard();
+						listing_Standard2.ColumnWidth = (float)Math.Round((innerRect.width - 17f) / 2f);
+						listing_Standard2.Begin(innerRect);
+						listing_Standard2.Label("PickUpAndHaulPlus_Text1".ModTranslate(), -1f);
+						listing_Standard2.GapLine();
+						listing_Standard2.Gap();
+						listing_Standard2.Label("PickUpAndHaulPlus_Text2".ModTranslate(), -1f);
+						listing_Standard2.End();
+						break;
+					}
 			}
 			Rect rect4 = windowRect.AtZero();
 			rect4.yMin += rect.yMax;
@@ -1772,49 +1776,49 @@ internal class Mod : Verse.Mod
 				IntVec3 storeCell;
 				switch (CanHaul(pawn, thing, jobTarget, out storeCell))
 				{
-				case CanHaulResult.RangeFail:
-					if (settings.Opportunity_PathChecker != Settings.PathCheckerEnum.Vanilla)
-					{
-						num++;
+					case CanHaulResult.RangeFail:
+						if (settings.Opportunity_PathChecker != Settings.PathCheckerEnum.Vanilla)
+						{
+							num++;
+							break;
+						}
+						goto case CanHaulResult.HardFail;
+					case CanHaulResult.HardFail:
+						haulables.RemoveAt(num);
 						break;
-					}
-					goto case CanHaulResult.HardFail;
-				case CanHaulResult.HardFail:
-					haulables.RemoveAt(num);
-					break;
-				case CanHaulResult.FullStop:
-					return null;
-				case CanHaulResult.Success:
-				{
-					if (DebugViewSettings.drawOpportunisticJobs)
-					{
-						for (int i = 0; i < 3; i++)
+					case CanHaulResult.FullStop:
+						return null;
+					case CanHaulResult.Success:
 						{
-							int duration = 600;
-							pawn.Map.debugDrawer.FlashCell(pawn.Position, 0.5f, pawn.Name.ToStringShort, duration);
-							pawn.Map.debugDrawer.FlashCell(thing.Position, 0.62f, pawn.Name.ToStringShort, duration);
-							pawn.Map.debugDrawer.FlashCell(storeCell, 0.22f, pawn.Name.ToStringShort, duration);
-							pawn.Map.debugDrawer.FlashCell(jobTarget.Cell, 0f, pawn.Name.ToStringShort, duration);
-							pawn.Map.debugDrawer.FlashLine(pawn.Position, jobTarget.Cell, duration, SimpleColor.Red);
-							pawn.Map.debugDrawer.FlashLine(pawn.Position, thing.Position, duration, SimpleColor.Green);
-							pawn.Map.debugDrawer.FlashLine(thing.Position, storeCell, duration, SimpleColor.Green);
-							pawn.Map.debugDrawer.FlashLine(storeCell, jobTarget.Cell, duration, SimpleColor.Green);
+							if (DebugViewSettings.drawOpportunisticJobs)
+							{
+								for (int i = 0; i < 3; i++)
+								{
+									int duration = 600;
+									pawn.Map.debugDrawer.FlashCell(pawn.Position, 0.5f, pawn.Name.ToStringShort, duration);
+									pawn.Map.debugDrawer.FlashCell(thing.Position, 0.62f, pawn.Name.ToStringShort, duration);
+									pawn.Map.debugDrawer.FlashCell(storeCell, 0.22f, pawn.Name.ToStringShort, duration);
+									pawn.Map.debugDrawer.FlashCell(jobTarget.Cell, 0f, pawn.Name.ToStringShort, duration);
+									pawn.Map.debugDrawer.FlashLine(pawn.Position, jobTarget.Cell, duration, SimpleColor.Red);
+									pawn.Map.debugDrawer.FlashLine(pawn.Position, thing.Position, duration, SimpleColor.Green);
+									pawn.Map.debugDrawer.FlashLine(thing.Position, storeCell, duration, SimpleColor.Green);
+									pawn.Map.debugDrawer.FlashLine(storeCell, jobTarget.Cell, duration, SimpleColor.Green);
+								}
+							}
+							if (havePuah && settings.UsePickUpAndHaulPlus)
+							{
+								SetOrAddDetour(pawn, DetourType.PuahOpportunity, pawn.Position, jobTarget).TrackPuahThing(thing, storeCell);
+								Job job = PuahJob(pawn, thing);
+								if (job != null)
+								{
+									return job;
+								}
+							}
+							Pawn pawn2 = pawn;
+							LocalTargetInfo? jobTarget2 = jobTarget;
+							SetOrAddDetour(pawn2, DetourType.HtcOpportunity, null, jobTarget2);
+							return HaulAIUtility.HaulToCellStorageJob(pawn, thing, storeCell, fitInStoreCell: false);
 						}
-					}
-					if (havePuah && settings.UsePickUpAndHaulPlus)
-					{
-						SetOrAddDetour(pawn, DetourType.PuahOpportunity, pawn.Position, jobTarget).TrackPuahThing(thing, storeCell);
-						Job job = PuahJob(pawn, thing);
-						if (job != null)
-						{
-							return job;
-						}
-					}
-					Pawn pawn2 = pawn;
-					LocalTargetInfo? jobTarget2 = jobTarget;
-					SetOrAddDetour(pawn2, DetourType.HtcOpportunity, null, jobTarget2);
-					return HaulAIUtility.HaulToCellStorageJob(pawn, thing, storeCell, fitInStoreCell: false);
-				}
 				}
 			}
 			return null;
@@ -1880,14 +1884,20 @@ internal class Mod : Verse.Mod
 		}
 		return settings.Opportunity_PathChecker switch
 		{
-			Settings.PathCheckerEnum.Vanilla => (!WithinRegionCount(storeCell)) ? CanHaulResult.HardFail : CanHaulResult.Success, 
-			Settings.PathCheckerEnum.Pathfinding => (!WithinPathCost(storeCell)) ? CanHaulResult.HardFail : CanHaulResult.Success, 
-			Settings.PathCheckerEnum.Default => WithinPathCost(storeCell) ? CanHaulResult.Success : CanHaulResult.FullStop, 
-			_ => throw new ArgumentOutOfRangeException(), 
+			Settings.PathCheckerEnum.Vanilla => (!WithinRegionCount(storeCell)) ? CanHaulResult.HardFail : CanHaulResult.Success,
+			Settings.PathCheckerEnum.Pathfinding => (!WithinPathCost(storeCell)) ? CanHaulResult.HardFail : CanHaulResult.Success,
+			Settings.PathCheckerEnum.Default => WithinPathCost(storeCell) ? CanHaulResult.Success : CanHaulResult.FullStop,
+			_ => throw new ArgumentOutOfRangeException(),
 		};
 		float GetPathCost(IntVec3 start, LocalTargetInfo destTarget, PathEndMode peMode)
 		{
-			PawnPath pawnPath = pawn.Map.pathFinder.FindPath(start, (LocalTargetInfo)destTarget.Cell, TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), peMode, (PathFinderCostTuning)null);
+			PawnPath pawnPath = pawn.Map.pathFinder.FindPathNow(
+				start,
+				(LocalTargetInfo)destTarget.Cell,
+				TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false),
+				(PathFinderCostTuning?)null,
+				peMode
+			);
 			float totalCost = pawnPath.TotalCost;
 			pawnPath.ReleaseToPool();
 			return totalCost;
@@ -2021,71 +2031,71 @@ internal class Mod : Verse.Mod
 		return foundCell.IsValid;
 	}
 
-	[DebugAction("Autotests", "Make colony (While You're Up)", false, false, false, false, 0, false, allowedGameStates = AllowedGameStates.PlayingOnMap)]
-	private static void MakeColonyWyu()
-	{
-		bool godMode = DebugSettings.godMode;
-		DebugSettings.godMode = true;
-		DebugViewSettings.drawOpportunisticJobs = true;
-		Thing.allowDestroyNonDestroyable = true;
-		if (Autotests_ColonyMaker.usedCells == null)
-		{
-			Autotests_ColonyMaker.usedCells = new BoolGrid(Autotests_ColonyMaker.Map);
-		}
-		else
-		{
-			Autotests_ColonyMaker.usedCells.ClearAndResizeTo(Autotests_ColonyMaker.Map);
-		}
-		Autotests_ColonyMaker.overRect = new CellRect(Autotests_ColonyMaker.Map.Center.x - 50, Autotests_ColonyMaker.Map.Center.z - 50, 100, 50);
-		Autotests_ColonyMaker.DeleteAllSpawnedPawns();
-		GenDebug.ClearArea(Autotests_ColonyMaker.overRect, Find.CurrentMap);
-		Autotests_ColonyMaker.Map.wealthWatcher.ForceRecount();
-		Autotests_ColonyMaker.TryGetFreeRect(90, 30, out CellRect result);
-		foreach (ThingDef item in DefDatabase<ThingDef>.AllDefs.Where((ThingDef def) => typeof(Building_WorkTable).IsAssignableFrom(def.thingClass)))
-		{
-			if (!(Autotests_ColonyMaker.TryMakeBuilding(item) is Building_WorkTable building_WorkTable))
-			{
-				continue;
-			}
-			foreach (RecipeDef allRecipe in building_WorkTable.def.AllRecipes)
-			{
-				building_WorkTable.billStack.AddBill(allRecipe.MakeNewBill());
-			}
-		}
-		result = result.ContractedBy(1);
-		foreach (ThingDef item2 in DefDatabase<ThingDef>.AllDefs.Where((ThingDef def) => DebugThingPlaceHelper.IsDebugSpawnable(def) && def.category == ThingCategory.Item).ToList())
-		{
-			DebugThingPlaceHelper.DebugSpawn(item2, result.RandomCell, -1, direct: true);
-		}
-		int num = 30;
-		List<TimeAssignmentDef> times = Enumerable.Repeat(TimeAssignmentDefOf.Work, 24).ToList();
-		for (int num2 = 0; num2 < num; num2++)
-		{
-			Pawn pawn = PawnGenerator.GeneratePawn(Faction.OfPlayer.def.basicMemberKind, Faction.OfPlayer);
-			pawn.needs.mood.thoughts.memories.TryGainMemory(ThoughtDefOf.NewColonyOptimism);
-			pawn.needs.mood.thoughts.memories.TryGainMemory(ThoughtDefOf.NewColonyHope);
-			pawn.timetable.times = times;
-			foreach (WorkTypeDef allDef in DefDatabase<WorkTypeDef>.AllDefs)
-			{
-				if (!pawn.WorkTypeIsDisabled(allDef))
-				{
-					pawn.workSettings.SetPriority(allDef, 3);
-				}
-			}
-			pawn.workSettings.Disable(WorkTypeDefOf.Hauling);
-			GenSpawn.Spawn(pawn, result.RandomCell, Autotests_ColonyMaker.Map);
-		}
-		Designator_ZoneAddStockpile_Resources designator_ZoneAddStockpile_Resources = new Designator_ZoneAddStockpile_Resources();
-		for (int num3 = 0; num3 < 7; num3++)
-		{
-			Autotests_ColonyMaker.TryGetFreeRect(8, 8, out CellRect result2);
-			result2 = result2.ContractedBy(1);
-			designator_ZoneAddStockpile_Resources.DesignateMultiCell(result2.Cells);
-			((Zone_Stockpile)Autotests_ColonyMaker.Map.zoneManager.ZoneAt(result2.CenterCell)).settings.Priority = StoragePriority.Normal;
-		}
-		Autotests_ColonyMaker.ClearAllHomeArea();
-		Autotests_ColonyMaker.FillWithHomeArea(Autotests_ColonyMaker.overRect);
-		DebugSettings.godMode = godMode;
-		Thing.allowDestroyNonDestroyable = false;
-	}
+	// [DebugAction("Autotests", "Make colony (While You're Up)", false, false, false, false, 0, false, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+	// private static void MakeColonyWyu()
+	// {
+	// 	bool godMode = DebugSettings.godMode;
+	// 	DebugSettings.godMode = true;
+	// 	DebugViewSettings.drawOpportunisticJobs = true;
+	// 	Thing.allowDestroyNonDestroyable = true;
+	// 	if (Autotests_ColonyMaker.usedCells == null)
+	// 	{
+	// 		Autotests_ColonyMaker.usedCells = new BoolGrid(Autotests_ColonyMaker.Map);
+	// 	}
+	// 	else
+	// 	{
+	// 		Autotests_ColonyMaker.usedCells.ClearAndResizeTo(Autotests_ColonyMaker.Map);
+	// 	}
+	// 	Autotests_ColonyMaker.overRect = new CellRect(Autotests_ColonyMaker.Map.Center.x - 50, Autotests_ColonyMaker.Map.Center.z - 50, 100, 50);
+	// 	Autotests_ColonyMaker.DeleteAllSpawnedPawns();
+	// 	GenDebug.ClearArea(Autotests_ColonyMaker.overRect, Find.CurrentMap);
+	// 	Autotests_ColonyMaker.Map.wealthWatcher.ForceRecount();
+	// 	Autotests_ColonyMaker.TryGetFreeRect(90, 30, out CellRect result);
+	// 	foreach (ThingDef item in DefDatabase<ThingDef>.AllDefs.Where((ThingDef def) => typeof(Building_WorkTable).IsAssignableFrom(def.thingClass)))
+	// 	{
+	// 		if (!(Autotests_ColonyMaker.TryMakeBuilding(item) is Building_WorkTable building_WorkTable))
+	// 		{
+	// 			continue;
+	// 		}
+	// 		foreach (RecipeDef allRecipe in building_WorkTable.def.AllRecipes)
+	// 		{
+	// 			building_WorkTable.billStack.AddBill(allRecipe.MakeNewBill());
+	// 		}
+	// 	}
+	// 	result = result.ContractedBy(1);
+	// 	foreach (ThingDef item2 in DefDatabase<ThingDef>.AllDefs.Where((ThingDef def) => DebugThingPlaceHelper.IsDebugSpawnable(def) && def.category == ThingCategory.Item).ToList())
+	// 	{
+	// 		DebugThingPlaceHelper.DebugSpawn(item2, result.RandomCell, -1, direct: true);
+	// 	}
+	// 	int num = 30;
+	// 	List<TimeAssignmentDef> times = Enumerable.Repeat(TimeAssignmentDefOf.Work, 24).ToList();
+	// 	for (int num2 = 0; num2 < num; num2++)
+	// 	{
+	// 		Pawn pawn = PawnGenerator.GeneratePawn(Faction.OfPlayer.def.basicMemberKind, Faction.OfPlayer);
+	// 		pawn.needs.mood.thoughts.memories.TryGainMemory(ThoughtDefOf.NewColonyOptimism);
+	// 		pawn.needs.mood.thoughts.memories.TryGainMemory(ThoughtDefOf.NewColonyHope);
+	// 		pawn.timetable.times = times;
+	// 		foreach (WorkTypeDef allDef in DefDatabase<WorkTypeDef>.AllDefs)
+	// 		{
+	// 			if (!pawn.WorkTypeIsDisabled(allDef))
+	// 			{
+	// 				pawn.workSettings.SetPriority(allDef, 3);
+	// 			}
+	// 		}
+	// 		pawn.workSettings.Disable(WorkTypeDefOf.Hauling);
+	// 		GenSpawn.Spawn(pawn, result.RandomCell, Autotests_ColonyMaker.Map);
+	// 	}
+	// 	Designator_ZoneAddStockpile_Resources designator_ZoneAddStockpile_Resources = new Designator_ZoneAddStockpile_Resources();
+	// 	for (int num3 = 0; num3 < 7; num3++)
+	// 	{
+	// 		Autotests_ColonyMaker.TryGetFreeRect(8, 8, out CellRect result2);
+	// 		result2 = result2.ContractedBy(1);
+	// 		designator_ZoneAddStockpile_Resources.DesignateMultiCell(result2.Cells);
+	// 		((Zone_Stockpile)Autotests_ColonyMaker.Map.zoneManager.ZoneAt(result2.CenterCell)).settings.Priority = StoragePriority.Normal;
+	// 	}
+	// 	Autotests_ColonyMaker.ClearAllHomeArea();
+	// 	Autotests_ColonyMaker.FillWithHomeArea(Autotests_ColonyMaker.overRect);
+	// 	DebugSettings.godMode = godMode;
+	// 	Thing.allowDestroyNonDestroyable = false;
+	// }
 }
