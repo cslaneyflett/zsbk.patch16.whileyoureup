@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <ModMetaData>
-  <name>While You're Up (with add-on for PUAH)</name>
-  <packageId>zsbk.patch-16.while-youre-up</packageId>
+  <name>While You're Up (1.6 patch)</name>
+  <packageId>zsbk.patch16.whileyoureup</packageId>
   <author>CodeOptimist</author>
   <url>https://discord.gg/pnZGQAN</url>
   <supportedVersions>
