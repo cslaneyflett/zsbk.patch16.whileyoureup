@@ -527,7 +527,11 @@ internal class Mod : Verse.Mod
 				for (int i = 0; i < job.targetQueueB.Count; i++)
 				{
 					LocalTargetInfo localTargetInfo = job.targetQueueB[i];
-					if (localTargetInfo.Thing != null && ((havePuah && settings.UsePickUpAndHaulPlus) || localTargetInfo.Thing.stackCount > job.countQueue[i]) && HaulAIUtility.PawnCanAutomaticallyHaulFast(value, localTargetInfo.Thing, forced: false))
+					if (
+						localTargetInfo.Thing != null && localTargetInfo.Thing.ParentHolder != null &&
+						((havePuah && settings.UsePickUpAndHaulPlus) || localTargetInfo.Thing.stackCount > job.countQueue[i]) &&
+						HaulAIUtility.PawnCanAutomaticallyHaulFast(value, localTargetInfo.Thing, forced: false)
+					)
 					{
 						job2 = BeforeCarryDetour_Job(value, job.targetA, localTargetInfo.Thing);
 						if (job2 != null)
