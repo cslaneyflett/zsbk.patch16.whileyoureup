@@ -1016,7 +1016,7 @@ internal class Mod : Verse.Mod
 			listing_Standard.NewColumn();
 			listing_Standard.DrawBool(ref settings.DrawSpecialHauls, "DrawSpecialHauls");
 			listing_Standard.NewColumn();
-			if (ModLister.HasActiveModWithName("Pick Up And Haul"))
+			if (havePuah)
 			{
 				listing_Standard.DrawBool(ref settings.UsePickUpAndHaulPlus, "UsePickUpAndHaulPlus");
 				if (tab == Tab.PickUpAndHaul && !settings.UsePickUpAndHaulPlus)
@@ -1045,7 +1045,7 @@ internal class Mod : Verse.Mod
 			{
 				tab = Tab.BeforeCarryDetour;
 			}, tab == Tab.BeforeCarryDetour));
-			if (ModLister.HasActiveModWithName("Pick Up And Haul") && settings.UsePickUpAndHaulPlus)
+			if (havePuah && settings.UsePickUpAndHaulPlus)
 			{
 				tabsList.Add(new TabRecord("PickUpAndHaulPlus_Tab".ModTranslate(), delegate
 				{
